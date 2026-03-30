@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIE — Controle de Prazos Regulatórios | Addvalora Brasil</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23003B5C'/><line x1='16' y1='4' x2='16' y2='28' stroke='%23EF8200' stroke-width='3'/><line x1='4' y1='16' x2='28' y2='16' stroke='%23EF8200' stroke-width='3'/></svg>"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --adv-orange: #EF8200;
+      --adv-blue: #003B5C;
+      --adv-blue-light: #005A8E;
+      --adv-orange-light: #FFAA44;
+      --adv-gray: #5B6770;
+      --adv-green: #28a745;
+      --adv-red: #DA291C;
+      --adv-yellow: #f59e0b;
+      --adv-purple: #7c3aed;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #F4F6F9; color: #1a2533; min-height: 100vh; }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, var(--adv-blue) 0%, #005A8E 100%);
+      padding: 0; box-shadow: 0 4px 20px rgba(0,59,92,0.3);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 32px; max-width: 1700px; margin: 0 auto;
+    }
+    .header-brand { display: flex; align-items: center; gap: 18px; }
+    .header-title h1 { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: 0.04em; }
+    .header-title p { font-size: 0.78rem; color: rgba(255,255,255,0.75); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .live-clock { text-align: right; color: #fff; }
+    .live-clock .clock-time { font-size: 1.5rem; font-weight: 700; color: var(--adv-orange); }
+    .live-clock .clock-date { font-size: 0.72rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.06em; }
+    .addvalora-badge {
+      background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 6px 14px; color: #fff;
+      font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .addvalora-badge span { color: var(--adv-orange); }
+
+    .main { max-width: 1700px; margin: 0 auto; padding: 24px 20px; }
+
+    /* UPLOAD BANNER */
+    .upload-banner {
+      background: linear-gradient(135deg, var(--adv-blue) 0%, #004f7a 100%);
+      border-radius: 16px; padding: 18px 24px;
+      display: flex; align-items: center; gap: 18px;
+      margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,59,92,0.18);
+      flex-wrap: wrap;
+    }
+    .upload-icon {
+      width: 50px; height: 50px; background: var(--adv-orange);
+      border-radius: 12px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; color: #fff; flex-shrink: 0;
+    }
+    .upload-info { flex: 1; min-width: 200px; }
+    .upload-info h3 { color: #fff; font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; }
+    .upload-info p { color: rgba(255,255,255,0.7); font-size: 0.78rem; }
+    .upload-btn {
+      background: var(--adv-orange); color: #fff; border: none;
+      border-radius: 10px; padding: 10px 20px; font-size: 0.85rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+    }
+    .upload-btn:hover { background: #d97400; transform: translateY(-1px); }
+    .upload-status {
+      color: rgba(255,255,255,0.85); font-size: 0.78rem;
+      display: flex; align-items: center; gap: 6px;
+    }
+    #file-input { display: none; }
+
+    /* SYNC BAR */
+    .sync-bar {
+      background: linear-gradient(135deg, #1a3d1f 0%, #166534 100%);
+      border-radius: 12px; padding: 12px 20px;
+      display: none; align-items: center; gap: 14px;
+      margin-bottom: 20px; box-shadow: 0 4px 15px rgba(22,101,52,0.2);
+      flex-wrap: wrap;
+    }
+    .sync-bar.show { display: flex; }
+    .sync-bar h4 { color: #fff; font-size: 0.88rem; font-weight: 700; flex: 1; }
+    .sync-progress { background: rgba(255,255,255,0.2); border-radius: 4px; height: 6px; width: 150px; overflow: hidden; }
+    .sync-fill { height: 100%; background: #4ade80; transition: width 0.4s; }
+    .btn-sync {
+      background: #16a34a; color: #fff; border: none; border-radius: 8px;
+      padding: 8px 16px; font-size: 0.8rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-sync:hover { background: #15803d; }
+    .gas-input {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px; padding: 6px 12px; color: #fff; font-size: 0.75rem;
+      width: 250px; outline: none;
+    }
+
+    /* KPI GRID */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+      gap: 14px; margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: #fff; border-radius: 14px; padding: 18px 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      display: flex; align-items: center; gap: 14px;
+      border-left: 4px solid transparent;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer; user-select: none;
+      position: relative; overflow: hidden;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
+    .kpi-card.active-filter { box-shadow: 0 0 0 3px rgba(0,0,0,0.25) inset, 0 8px 24px rgba(0,0,0,0.14); }
+    .kpi-card.blue { border-left-color: var(--adv-blue); }
+    .kpi-card.blue .kpi-icon { background: var(--adv-blue); }
+    .kpi-card.orange { border-left-color: var(--adv-orange); }
+    .kpi-card.orange .kpi-icon { background: var(--adv-orange); }
+    .kpi-card.red { border-left-color: var(--adv-red); }
+    .kpi-card.red .kpi-icon { background: var(--adv-red); }
+    .kpi-card.green { border-left-color: var(--adv-green); }
+    .kpi-card.green .kpi-icon { background: var(--adv-green); }
+    .kpi-card.yellow { border-left-color: var(--adv-yellow); }
+    .kpi-card.yellow .kpi-icon { background: var(--adv-yellow); }
+    .kpi-card.purple { border-left-color: var(--adv-purple); }
+    .kpi-card.purple .kpi-icon { background: var(--adv-purple); }
+    .kpi-card.gray { border-left-color: #6b7280; }
+    .kpi-card.gray .kpi-icon { background: #6b7280; }
+    .kpi-icon {
+      width: 46px; height: 46px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 1.15rem; flex-shrink: 0;
+    }
+    .kpi-info h3 { font-size: 1.7rem; font-weight: 800; line-height: 1; margin-bottom: 3px; color: #1a2533; }
+    .kpi-info p { font-size: 0.7rem; color: var(--adv-gray); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* TABLE SECTION */
+    .table-section {
+      background: #fff; border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07); overflow: hidden;
+    }
+    .table-header {
+      padding: 16px 22px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 2px solid #f0f2f5; flex-wrap: wrap; gap: 10px;
+    }
+    .table-header h2 {
+      font-size: 0.95rem; font-weight: 700; color: var(--adv-blue);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .table-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .search-box { position: relative; }
+    .search-box input {
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      padding: 7px 10px 7px 32px; font-size: 0.8rem; width: 200px; outline: none;
+    }
+    .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #aaa; font-size: 0.78rem; }
+    .filter-select {
+      border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 7px 10px;
+      font-size: 0.8rem; outline: none; background: #fff;
+    }
+    .btn-export {
+      background: var(--adv-blue); color: #fff; border: none; border-radius: 8px;
+      padding: 7px 14px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .table-wrapper { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+    thead th {
+      background: var(--adv-blue); color: #fff; padding: 11px 12px;
+      text-align: left; font-weight: 700; font-size: 0.68rem;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      white-space: nowrap; cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { background: #004f7a; }
+    thead th.mgmt { background: #166534; } /* Verde para colunas de gestão */
+    thead th.mgmt:hover { background: #14532d; }
+    tbody tr { border-bottom: 1px solid #f0f2f5; transition: background 0.15s; }
+    tbody tr:hover { background: #f8faff; }
+    tbody td { padding: 9px 12px; vertical-align: middle; }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55); z-index: 1000;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: #fff; border-radius: 18px;
+      max-width: 820px; width: 100%; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header {
+      background: linear-gradient(135deg, var(--adv-blue), #005A8E);
+      padding: 18px 24px; border-radius: 18px 18px 0 0;
+      display: flex; align-items: center; justify-content: space-between; color: #fff;
+    }
+    .modal-header h2 { font-size: 1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; padding: 4px 8px; }
+    .modal-body { padding: 22px 24px; }
+
+    /* FOOTER */
+    .footer { text-align: center; padding: 18px; color: var(--adv-gray); font-size: 0.72rem; border-top: 1px solid #e2e8f0; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <img src="/static/addvalora-logo.png" alt="Addvalora" class="h-10 w-auto rounded-lg mr-4"/>
+      <div class="header-title">
+        <h1>NIE — Controle de Prazos Regulatórios</h1>
+        <p>Dashboard de Monitoramento · Addvalora Brasil</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="addvalora-badge">NIE <span>Dashboard</span></div>
+      <div class="live-clock">
+        <div class="clock-time" id="clock-t">00:00:00</div>
+        <div class="clock-date" id="clock-d">--/--/----</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- UPLOAD BANNER -->
+  <div class="upload-banner">
+    <div class="upload-icon"><i class="fas fa-file-excel"></i></div>
+    <div class="upload-info">
+      <h3>Importar Planilha Baruc / Controle</h3>
+      <p>O sistema detecta automaticamente o formato e calcula os prazos regulatórios.</p>
+    </div>
+    <div class="upload-status" id="data-tag">
+      <i class="fas fa-info-circle"></i> Aguardando importação...
+    </div>
+    <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+      <i class="fas fa-upload"></i> Selecionar Arquivo
+    </button>
+    <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleUpload(event)" />
+  </div>
+
+  <!-- SYNC BAR -->
+  <div class="sync-bar" id="sync-bar">
+    <div class="flex items-center gap-4 flex-1">
+      <div class="bg-green-600 w-10 h-10 rounded-lg flex items-center justify-center text-white">
+        <i class="fab fa-google"></i>
+      </div>
+      <div>
+        <h4>Sincronizar com Google Sheets</h4>
+        <p id="sync-status" class="text-white/70 text-xs">Pronto para enviar registros</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <input type="text" id="gas-url" class="gas-input" placeholder="URL do WebApp Apps Script..."/>
+      <div class="sync-progress"><div class="sync-fill" id="sync-fill" style="width:0%"></div></div>
+      <button class="btn-sync" id="btn-sync" onclick="syncGoogleSheets()">
+        <i class="fas fa-sync-alt"></i> Sincronizar
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI GRID -->
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="col-span-full flex flex-col items-center py-12 text-gray-400">
+      <i class="fas fa-inbox text-5xl mb-4 opacity-20"></i>
+      <p>Importe uma planilha para visualizar os indicadores</p>
+    </div>
+  </div>
+
+  <!-- TABLE SECTION -->
+  <div class="table-section">
+    <div class="table-header">
+      <h2><i class="fas fa-list text-orange-500"></i> Processos em Aberto</h2>
+      <div class="table-controls">
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input type="text" id="srch" placeholder="Buscar processo..." oninput="applyF()" />
+        </div>
+        <select class="filter-select" id="f-reg" onchange="applyF()">
+          <option value="">Todos os Reguladores</option>
+        </select>
+        <select class="filter-select" id="f-status" onchange="applyF()">
+          <option value="">Todos os Status</option>
+        </select>
+        <button class="btn-export" onclick="exportCSV()">
+          <i class="fas fa-download"></i> Exportar CSV
+        </button>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table id="main-tbl">
+        <thead>
+          <tr>
+            <th onclick="sortBy('addvalora')">Ref. Addvalora</th>
+            <th onclick="sortBy('segurado')">Segurado</th>
+            <th onclick="sortBy('regulador')">Regulador</th>
+            <th onclick="sortBy('seguradora')">Seguradora</th>
+            <th onclick="sortBy('status')">Status</th>
+            <th onclick="sortBy('data_entrada')">Entrada</th>
+            <th onclick="sortBy('prazo_d2')" class="mgmt"><i class="fas fa-calendar-check mr-1"></i> Prazo Prelim.</th>
+            <th onclick="sortBy('prazo_90d')" class="mgmt"><i class="fas fa-clock mr-1"></i> Ciclo 90d</th>
+            <th onclick="sortBy('_diasAbertos')" class="mgmt"><i class="fas fa-hourglass-half mr-1"></i> Dias Aberto</th>
+            <th>Situação</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+    <div class="pagination flex justify-between items-center p-4 border-t" id="pg"></div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  Addvalora Brasil · NIE – Núcleo de Inteligência Estratégica · Dashboard v2.0
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-ov" onclick="if(event.target===this)closeM()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="m-title">Detalhes do Processo</h2>
+      <button class="modal-close" onclick="closeM()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="m-body"></div>
+  </div>
+</div>
+
+<div class="toast-c fixed bottom-6 right-6 z-50 flex flex-col gap-2" id="toast-c"></div>
+
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>
